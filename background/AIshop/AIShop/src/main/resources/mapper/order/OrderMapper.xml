@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.aishop.mapper.order.OrderMapper">
+
+    <!-- 订单列表（关联用户） -->
+    <resultMap id="OrderDTOMap" type="org.example.aishop.dto.OrderDTO">
+        <id property="id" column="id"/>
+        <result property="orderNo" column="order_no"/>
+        <result property="userId" column="user_id"/>
+        <result property="username" column="username"/>
+        <result property="totalPrice" column="total_price"/>
+        <result property="couponPrice" column="coupon_price"/>
+        <result property="actualPrice" column="actual_price"/>
+        <result property="payType" column="pay_type"/>
+        <result property="payStatus" column="pay_status"/>
+        <result property="orderStatus" column="order_status"/>
+        <result property="addressId" column="address_id"/>
+        <result property="remark" column="remark"/>
+        <result property="createTime" column="create_time"/>
+        <result property="payTime" column="pay_time"/>
+        <result property="deliverTime" column="deliver_time"/>
+        <result property="finishTime" column="finish_time"/>
+        <result property="shopName" column="shop_name"/>
+    </resultMap>
+
+    <!-- 订单列表（关联用户、子查询店铺名称） -->
+    <select id="selectOrderPage" resultMap="OrderDTOMap">
+        SELECT o.id, o.order_no, o.user_id, u.username,
+               o.total_price, o.coupon_price, o.actual_price,
+               o.pay_type, o.pay_status, o.order_status,
+               o.address_id, o.remark,
+               o.create_time,
+               NULL AS pay_time, NULL AS deliver_time, NULL AS finish_time,
+               (SELECT GROUP_CONCAT(DISTINCT s.shop_name SEPARATOR '、')
+                FROM order_item oi
+                LEFT JOIN shop s ON oi.shop_id = s.id
+                WHERE oi.order_id = o.id) AS shop_name
+        FROM orders o
+        LEFT JOIN user u ON o.user_id = u.id
+        <where>
+            <if test="orderNo != null and orderNo != ''">
+                AND o.order_no LIKE CONCAT('%', #{orderNo}, '%')
+            </if>
+            <if test="orderStatus != null">
+                AND o.order_status = #{orderStatus}
+            </if>
+            <if test="startTime != null">
+                AND o.create_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND o.create_time &lt;= #{endTime}
+            </if>
+            <if test="userId != null">
+                AND o.user_id = #{userId}
+            </if>
+            <if test="shopId != null">
+                AND o.id IN (SELECT DISTINCT oi.order_id FROM order_item oi WHERE oi.shop_id = #{shopId})
+            </if>
+        </where>
+        ORDER BY o.create_time DESC
+    </select>
+
+    <!-- 订单详情（关联用户、地址） -->
+    <resultMap id="OrderDetailDTOMap" type="org.example.aishop.dto.OrderDetailDTO">
+        <id property="id" column="id"/>
+        <result property="orderNo" column="order_no"/>
+        <result property="userId" column="user_id"/>
+        <result property="username" column="username"/>
+        <result property="totalPrice" column="total_price"/>
+        <result property="couponPrice" column="coupon_price"/>
+        <result property="actualPrice" column="actual_price"/>
+        <result property="payType" column="pay_type"/>
+        <result property="payStatus" column="pay_status"/>
+        <result property="orderStatus" column="order_status"/>
+        <result property="addressId" column="address_id"/>
+        <result property="receiver" column="receiver"/>
+        <result property="receiverPhone" column="receiver_phone"/>
+        <result property="address" column="receiver_address"/>
+        <result property="remark" column="remark"/>
+        <result property="logistics" column="logistics"/>
+        <result property="createTime" column="create_time"/>
+        <result property="payTime" column="pay_time"/>
+        <result property="deliverTime" column="deliver_time"/>
+        <result property="finishTime" column="finish_time"/>
+    </resultMap>
+
+    <select id="selectOrderDetail" resultMap="OrderDetailDTOMap">
+        SELECT o.id, o.order_no, o.user_id, u.username,
+               o.total_price, o.coupon_price, o.actual_price,
+               o.pay_type, o.pay_status, o.order_status,
+               o.address_id, a.receiver, a.phone AS receiver_phone,
+               a.address AS receiver_address, o.remark, o.logistics,
+               o.create_time,
+               NULL AS pay_time, NULL AS deliver_time, NULL AS finish_time
+        FROM orders o
+        LEFT JOIN user u ON o.user_id = u.id
+        LEFT JOIN address a ON o.address_id = a.id
+        WHERE o.id = #{id}
+    </select>
+
+    <!-- 订单明细（关联商品、SKU、店铺、售后） -->
+    <resultMap id="OrderItemDTOMap" type="org.example.aishop.dto.OrderDetailDTO$OrderItemDTO">
+        <id property="id" column="id"/>
+        <result property="orderId" column="order_id"/>
+        <result property="productId" column="product_id"/>
+        <result property="productName" column="product_name"/>
+        <result property="productImage" column="product_image"/>
+        <result property="skuId" column="sku_id"/>
+        <result property="spec" column="spec"/>
+        <result property="shopId" column="shop_id"/>
+        <result property="shopName" column="shop_name"/>
+        <result property="num" column="num"/>
+        <result property="price" column="price"/>
+        <result property="subtotal" column="subtotal"/>
+        <result property="afterSaleId" column="after_sale_id"/>
+        <result property="hasComment" column="has_comment"/>
+    </resultMap>
+
+    <select id="selectOrderItems" resultMap="OrderItemDTOMap">
+        SELECT oi.id, oi.order_id, oi.product_id, p.name AS product_name, p.image AS product_image,
+               oi.sku_id, ps.spec, oi.shop_id, s.shop_name,
+               oi.num, oi.price, (oi.price * oi.num) AS subtotal,
+               as_item.id AS after_sale_id,
+               CASE WHEN cmt.id IS NOT NULL THEN 1 ELSE 0 END AS has_comment
+        FROM order_item oi
+        LEFT JOIN product p ON oi.product_id = p.id
+        LEFT JOIN product_sku ps ON oi.sku_id = ps.id
+        LEFT JOIN shop s ON oi.shop_id = s.id
+        LEFT JOIN after_sale as_item ON oi.id = as_item.order_item_id AND as_item.del_flag = 0
+        LEFT JOIN comment cmt ON oi.order_id = cmt.order_id AND oi.product_id = cmt.product_id AND cmt.del_flag = 0
+        WHERE oi.order_id = #{orderId}
+    </select>
+
+</mapper>

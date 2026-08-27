@@ -1,0 +1,40 @@
+﻿# Maven java
+target/
+*.jar
+*.original
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+
+# IDEA
+.idea/
+*.iml
+*.iws
+
+# vscode
+.vscode/
+
+# 密钥环境文件 绝对不要上传！
+.env
+*.env
+
+# 排除带明文密钥的SpringBoot配置（通配任意层级，不会漏）
+**/application*.yml
+**/application*.yaml
+
+# logs
+logs/
+*.log
+
+#前端node
+node_modules/
+dist/
+npm-debug.log
+
+#本地图片上传资源
+uploads/
+images/
+
+#系统文件
+.DS_Store
+Thumbs.db

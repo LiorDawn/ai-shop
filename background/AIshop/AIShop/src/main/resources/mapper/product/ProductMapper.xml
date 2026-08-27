@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.aishop.mapper.product.ProductMapper">
+
+    <resultMap id="ProductDTOMap" type="org.example.aishop.dto.ProductDTO">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="categoryName" column="category_name"/>
+        <result property="shopId" column="shop_id"/>
+        <result property="shopName" column="shop_name"/>
+        <result property="merchantId" column="merchant_id"/>
+        <result property="price" column="price"/>
+        <result property="originalPrice" column="price"/>
+        <result property="image" column="image"/>
+        <result property="description" column="description"/>
+        <result property="status" column="status"/>
+        <result property="sales" column="sales"/>
+        <result property="viewPoint" column="view_point"/>
+        <result property="createTime" column="create_time"/>
+        <result property="stock" column="stock"/>
+    </resultMap>
+
+    <!-- 商品详情（关联分类、店铺） -->
+    <select id="selectProductDetail" resultMap="ProductDTOMap">
+        SELECT p.id, p.name, p.category_id, c.name AS category_name,
+               p.shop_id, s.shop_name, s.merchant_id,
+               p.price, p.price AS original_price, p.image, p.description,
+	               p.status, p.sales, p.view_point, p.create_time,
+	               (SELECT COALESCE(SUM(ps.stock), 0) FROM product_sku ps WHERE ps.product_id = p.id) AS stock
+	        FROM product p
+	        LEFT JOIN category c ON p.category_id = c.id
+	        LEFT JOIN shop s ON p.shop_id = s.id
+	        WHERE p.id = #{id}
+    </select>
+
+    <!-- 商品列表（关联分类、店铺），支持分类/店铺筛选 -->
+    <select id="selectProductList" resultMap="ProductDTOMap">
+        SELECT p.id, p.name, p.category_id, c.name AS category_name,
+               p.shop_id, s.shop_name, s.merchant_id,
+               p.price, p.price AS original_price, p.image, p.description,
+	               p.status, p.sales, p.view_point, p.create_time,
+	               (SELECT COALESCE(SUM(ps.stock), 0) FROM product_sku ps WHERE ps.product_id = p.id) AS stock
+	        FROM product p
+	        LEFT JOIN category c ON p.category_id = c.id
+	        LEFT JOIN shop s ON p.shop_id = s.id
+	        <where> 1=1
+            <if test="shopId != null">
+                AND p.shop_id = #{shopId}
+            </if>
+            <if test="status != null">
+                AND p.status = #{status}
+            </if>
+            <if test="categoryId != null">
+                AND p.category_id = #{categoryId}
+            </if>
+            <if test="categoryIds != null and categoryIds.size() > 0">
+                AND p.category_id IN
+                <foreach collection="categoryIds" item="cid" open="(" separator="," close=")">#{cid}</foreach>
+            </if>
+            <if test="name != null and name != ''">
+                AND p.name LIKE CONCAT('%', #{name}, '%')
+            </if>
+        </where>
+        <choose>
+            <when test="sort == 1">ORDER BY p.price ASC</when>
+            <when test="sort == 2">ORDER BY p.price DESC</when>
+            <when test="sort == 3">ORDER BY p.create_time DESC</when>
+            <otherwise>ORDER BY p.create_time DESC</otherwise>
+        </choose>
+    </select>
+
+</mapper>

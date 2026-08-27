@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.aishop.mapper.order.AfterSaleMapper">
+
+    <resultMap id="AfterSaleDTOMap" type="org.example.aishop.dto.AfterSaleDTO">
+        <id property="id" column="id"/>
+        <result property="orderId" column="order_id"/>
+        <result property="orderItemId" column="order_item_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="shopId" column="shop_id"/>
+        <result property="productId" column="product_id"/>
+        <result property="orderNo" column="order_no"/>
+        <result property="username" column="username"/>
+        <result property="productName" column="product_name"/>
+        <result property="productImage" column="product_image"/>
+        <result property="num" column="num"/>
+        <result property="spec" column="spec"/>
+        <result property="type" column="type"/>
+        <result property="typeText" column="type_text"/>
+        <result property="amount" column="amount"/>
+        <result property="reason" column="reason"/>
+        <result property="description" column="description"/>
+        <result property="images" column="images"/>
+        <result property="auditStatus" column="audit_status"/>
+        <result property="statusText" column="status_text"/>
+        <result property="auditRemark" column="audit_remark"/>
+        <result property="auditBy" column="audit_by"/>
+        <result property="auditTime" column="audit_time"/>
+        <result property="expressCompany" column="express_company"/>
+        <result property="expressNo" column="express_no"/>
+        <result property="returnAddress" column="return_address"/>
+        <result property="finishTime" column="finish_time"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <!-- 售后列表（关联订单、用户、订单项、商品、SKU） -->
+    <select id="selectAfterSalePage" resultMap="AfterSaleDTOMap">
+        SELECT a.id, a.order_id, a.order_item_id, a.user_id, a.shop_id, a.product_id,
+               o.order_no, u.username,
+               p.name AS product_name, p.image AS product_image,
+               oi.num, ps.spec,
+               a.type,
+               CASE a.type WHEN 0 THEN '仅退款' WHEN 1 THEN '退货退款' WHEN 2 THEN '换货' END AS type_text,
+               a.amount, a.reason, a.description, a.images,
+               a.audit_status,
+               CASE a.audit_status
+                   WHEN 0 THEN '待审核' WHEN 1 THEN '已通过'
+                   WHEN 2 THEN '已驳回' WHEN 3 THEN '待退货' WHEN 4 THEN '已完成'
+               END AS status_text,
+               a.audit_remark, a.audit_by, a.audit_time,
+               a.express_company, a.express_no, a.return_address, a.finish_time,
+               a.create_time
+        FROM after_sale a
+        LEFT JOIN orders o ON a.order_id = o.id
+        LEFT JOIN user u ON o.user_id = u.id
+        LEFT JOIN order_item oi ON a.order_item_id = oi.id
+        LEFT JOIN product p ON oi.product_id = p.id
+        LEFT JOIN product_sku ps ON oi.sku_id = ps.id
+        <where>
+            a.del_flag = 0
+            <if test="orderNo != null and orderNo != ''">
+                AND o.order_no LIKE CONCAT('%', #{orderNo}, '%')
+            </if>
+            <if test="auditStatus != null">
+                AND a.audit_status = #{auditStatus}
+            </if>
+            <if test="type != null">
+                AND a.type = #{type}
+            </if>
+            <if test="startTime != null">
+                AND a.create_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND a.create_time &lt;= #{endTime}
+            </if>
+            <if test="shopId != null">
+                AND a.shop_id = #{shopId}
+            </if>
+            <if test="userId != null">
+                AND a.user_id = #{userId}
+            </if>
+        </where>
+        ORDER BY a.id DESC
+    </select>
+
+</mapper>
