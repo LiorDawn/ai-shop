@@ -18,9 +18,18 @@ pom.xml.versionsBackup
 .env
 *.env
 
-# 排除带明文密钥的SpringBoot配置（通配任意层级，不会漏）
-**/application*.yml
-**/application*.yaml
+# 排除带明文密钥的SpringBoot配置
+# 忽略真实使用的密钥配置
+**/application.yml
+**/application‑dev.yml
+**/application‑prod.yml
+**/application.yaml
+**/application‑dev.yaml
+**/application‑prod.yaml
+
+# 允许配置模板上传github
+!**/*.template.yml
+!**/*.template.yaml
 
 # logs
 logs/
